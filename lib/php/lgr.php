@@ -6,7 +6,10 @@
 global $__lgr;
 $__lgr = array(
 	'default'=>'',
-	'handles'=>array()
+	'handles'=>array(),
+	'has_writes'=>array(),
+	'header'=>'--------------------------------------',
+	'footer'=>'--------------------------------------',
 );
 
 class lgr
@@ -14,18 +17,28 @@ class lgr
 	function init($config)
 	{
 		global $__lgr;
-		foreach($config as $type=>$filename)
+		
+			
+		foreach($config as $key=>$value)
 		{
-			if($__lgr['default'] == '')
-				$__lgr['default'] = $type;
-			if(file_exists($filename))
+			if($key == 'logs')
 			{
-				$__lgr['handles'][$type] = fopen($filename,'a');
+				foreach($config['logs'] as $type=>$filename)
+				{
+					if($__lgr['default'] == '')
+						$__lgr['default'] = $type;
+					if(file_exists($filename))
+					{
+						$__lgr['handles'][$type] = fopen($filename,'a');
+					}
+					else
+					{
+						throw new Exception('LGR: Could not open log file: '.$filename);
+					}
+				}
 			}
 			else
-			{
-				throw new Exception('LGR: Could not open log file: '.$filename);
-			}
+				$__dfm[$key] = $value;		
 		}
 	}
 	
@@ -46,7 +59,14 @@ class lgr
 			throw new Exception('LGR: invalid log type: '.$type);
 		}
 		
-		fwrite($__lgr['handles'][$type],$to_write."\n");
+		# write a line to the log file if it hasn't been written to before
+		if(!isset($__lgr['has_writes'][$type]))
+		{
+			$__lgr['has_writes'][$type] = true;
+			fwrite($__lgr['handles'][$type],$__lgr['header']."\n");
+		}
+		
+		fwrite($__lgr['handles'][$type],date('H:i:s',time()).': '.$to_write."\n");
 	}
 	
 	function request()
@@ -68,6 +88,13 @@ class lgr
 			{
 				throw new Exception('LGR: Could not close type: '.$type);
 			}
+			
+			# write a line to the log file if it hasn't been written to before
+			if(isset($__lgr['has_writes'][$type]))
+			{
+				fwrite($__lgr['handles'][$type],$__lgr['footer']."\n");
+			}
+			
 			fclose($__lgr['handles'][$type]);
 		}
 	}
