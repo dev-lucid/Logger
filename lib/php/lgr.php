@@ -8,12 +8,20 @@ $__lgr = array(
 	'default'=>'',
 	'handles'=>array(),
 	'has_writes'=>array(),
+	'hooks'=>array(),
 	'header'=>'--------------------------------------',
 	'footer'=>'--------------------------------------',
 );
 
 class lgr
 {
+	function call_hook($hook,$p0=null,$p1=null,$p2=null,$p3=null,$p4=null,$p5=null,$p6=null)
+	{
+		global $__lgr;
+		if(isset($__lgr['hooks'][$hook]))
+			$__lgr['hooks'][$hook]($p0,$p1,$p2,$p3,$p4,$p5,$p6);
+	}
+	
 	function init($config)
 	{
 		global $__lgr;
@@ -39,6 +47,26 @@ class lgr
 			}
 			else
 				$__dfm[$key] = $value;		
+		}
+	}
+	
+	function deinit()
+	{
+		global $__lgr;
+		foreach($__lgr['handles'] as $type=>$handle)
+		{
+			if(!isset($__lgr['handles'][$type]))
+			{
+				throw new Exception('LGR: Could not close type: '.$type);
+			}
+			
+			# write a line to the log file if it hasn't been written to before
+			if(isset($__lgr['has_writes'][$type]))
+			{
+				fwrite($__lgr['handles'][$type],$__lgr['footer']."\n");
+			}
+			
+			fclose($__lgr['handles'][$type]);
 		}
 	}
 	
@@ -77,26 +105,6 @@ class lgr
 	function server()
 	{
 		lgr::write($_SERVER);
-	}
-	
-	function deinit()
-	{
-		global $__lgr;
-		foreach($__lgr['handles'] as $type=>$handle)
-		{
-			if(!isset($__lgr['handles'][$type]))
-			{
-				throw new Exception('LGR: Could not close type: '.$type);
-			}
-			
-			# write a line to the log file if it hasn't been written to before
-			if(isset($__lgr['has_writes'][$type]))
-			{
-				fwrite($__lgr['handles'][$type],$__lgr['footer']."\n");
-			}
-			
-			fclose($__lgr['handles'][$type]);
-		}
 	}
 }
 
